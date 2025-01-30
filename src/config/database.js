@@ -16,6 +16,15 @@ const connectDB = async () => {
             logger.warn('MongoDB disconnected. Attempting to reconnect...');
         });
 
+        // Add more event handlers
+        mongoose.connection.on('error', (err) => {
+            logger.error('MongoDB error event:', err);
+        });
+
+        mongoose.connection.on('reconnected', () => {
+            logger.info('MongoDB reconnected successfully');
+        });
+
         logger.info(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
         if (error.name === 'MongooseServerSelectionError') {
@@ -23,6 +32,8 @@ const connectDB = async () => {
         } else {
             logger.error('MongoDB connection error:', error);
         }
+        // Consider implementing graceful shutdown instead of immediate exit
+        await mongoose.connection.close();
         process.exit(1);
     }
 };
