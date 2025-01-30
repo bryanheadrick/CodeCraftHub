@@ -15,40 +15,57 @@ const routes = require('./routes/index');
 const errorHandler = require('./middlewares/error-handler');
 const logger = require('./config/logger');
 
-// Initialize express application
+// Constants
+const API_PREFIX = '/';
+const DEFAULT_PORT = 3000;
+
+/**
+ * Initialize express application
+ */
 const app = express();
 
 /**
  * Database Connection
  * Establishes connection to MongoDB using configuration from ./config/database
  */
-connectDB();
+connectDB().catch(err => {
+    logger.error('Database connection failed:', err);
+    process.exit(1);
+});
 
 /**
- * Middleware Configuration
- * - helmet: Adds various HTTP headers for security
- * - cors: Enables Cross-Origin Resource Sharing
- * - morgan: HTTP request logger
- * - express.json: Parses incoming JSON payloads
- * - express.urlencoded: Parses incoming URL-encoded payloads
+ * Security Middleware Configuration
  */
-app.use(helmet());
-app.use(cors());
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(helmet({
+    contentSecurityPolicy: process.env.NODE_ENV === 'production',
+    crossOriginEmbedderPolicy: process.env.NODE_ENV === 'production'
+}));
+
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+/**
+ * Request Processing Middleware
+ */
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 /**
  * Health Check Endpoint
  * Used for monitoring service status
  * @route GET /health
- * @returns {Object} Service status information
  */
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'OK',
         service: 'User Service',
-        timestamp: new Date()
+        timestamp: new Date(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV
     });
 });
 
@@ -56,13 +73,18 @@ app.get('/health', (req, res) => {
  * API Routes
  * All API routes are prefixed with /api/v1
  */
-app.use('/api/v1', routes);
+app.use(API_PREFIX, routes);
 
 /**
  * 404 Handler
  * Catches any requests to undefined routes
  */
 app.use((req, res) => {
+    logger.warn('Route not found:', {
+        path: req.originalUrl,
+        method: req.method
+    });
+    
     res.status(404).json({
         success: false,
         message: 'Route not found'
@@ -75,15 +97,24 @@ app.use((req, res) => {
  */
 app.use(errorHandler);
 
-// Server Configuration
-const PORT = process.env.PORT || 3000;
+/**
+ * Server Configuration
+ */
+const PORT = process.env.PORT || DEFAULT_PORT;
 
 /**
  * Start Server
  * Initializes the server on specified port
  */
-app.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+    logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+});
+
+process.on('SIGTERM', () => {
+    logger.info('SIGTERM received. Shutting down gracefully...');
+    server.close(() => {
+        logger.info('Process terminated!');
+    });
 });
 
 // Export for testing purposes
