@@ -1,27 +1,44 @@
-# User Service for Learning Platform
+# User Service API
 
-A microservice-based user management system built with Node.js, Express, and MongoDB. This service handles user operations for a learning platform, including user creation, authentication, and profile management.
+A microservice for user management and authentication in a learning platform.
+
+## Table of Contents
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [API Documentation](#api-documentation)
+- [Docker Setup](#docker-setup)
 
 ## Features
 
-- User CRUD operations
-- MongoDB integration
-- Docker containerization
-- Logging system
-- Error handling
-- API documentation
-- Containerized development environment
+- User Authentication (Register, Login)
+- Email Verification
+- Password Reset
+- Role-based Access Control
+- User Profile Management
+- Admin User Management
+- Protected Routes
+- Docker Support
 
-## Prerequisites
+## Tech Stack
 
-- Node.js (v18 or higher)
-- Docker and Docker Compose
-- MongoDB (if running locally)
-- npm or yarn
+- Node.js
+- Express.js
+- MongoDB
+- Docker
+- JWT Authentication
+- Bcrypt for Password Hashing
+- Nodemailer for Email Services
 
 ## Getting Started
 
-### Using Docker (Recommended)
+### Prerequisites
+
+- Node.js (v14 or higher)
+- MongoDB
+- Docker and Docker Compose (optional)
+
+### Local Setup
 
 1. Clone the repository:
 ```bash
@@ -29,111 +46,304 @@ git clone <repository-url>
 cd user-service
 ```
 
-2. Create a `.env` file:
-```bash
-cp .env.example .env
-```
-
-3. Build and run the containers:
-```bash
-docker-compose up --build
-```
-
-The service will be available at `http://localhost:3000`
-
-### Local Development
-
-1. Install dependencies:
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-2. Configure environment variables:
+3. Set up environment variables:
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
-3. Start the service:
+4. Start the server:
 ```bash
 npm run dev
 ```
 
-## API Endpoints
+### Docker Setup
 
-### Users
-
-- `POST /api/v1/users` - Create a new user
-- `GET /api/v1/users` - Get all users
-- `GET /api/v1/users/:id` - Get a specific user
-- `PUT /api/v1/users/:id` - Update a user
-- `DELETE /api/v1/users/:id` - Delete a user
-
-### Health Check
-
-- `GET /health` - Service health check
-
-## Project Structure
-
-```
-user-service/
-├── src/
-│   ├── config/
-│   │   ├── database.js
-│   │   └── logger.js
-│   ├── controllers/
-│   │   └── user.controller.js
-│   ├── middleware/
-│   │   └── error-handler.js
-│   ├── models/
-│   │   └── user.model.js
-│   ├── routes/
-│   │   ├── index.js
-│   │   └── user.routes.js
-│   └── app.js
-├── tests/
-├── Dockerfile
-├── docker-compose.yml
-└── package.json
-```
-
-## Available Scripts
-
-- `npm start` - Start the production server
-- `npm run dev` - Start the development server with hot reload
-- `npm test` - Run tests
-- `npm run lint` - Run ESLint
-- `npm run test:coverage` - Run tests with coverage report
-
-## Docker Commands
-
-Build and start services:
+1. Build and run with Docker Compose:
 ```bash
 docker-compose up --build
 ```
 
-Stop services:
-```bash
-docker-compose down
+## API Documentation
+
+### Authentication Endpoints
+
+#### Register User
+```
+POST /api/v1/auth/register
+```
+Request Body:
+```json
+{
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john@example.com",
+    "password": "password123",
+    "role": "student"
+}
+```
+Response:
+```json
+{
+    "success": true,
+    "data": {
+        "user": {
+            "id": "user_id",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john@example.com",
+            "role": "student"
+        },
+        "token": "JWT_TOKEN"
+    }
+}
 ```
 
-View logs:
-```bash
-docker-compose logs -f app
+#### Login
 ```
+POST /api/v1/auth/login
+```
+Request Body:
+```json
+{
+    "email": "john@example.com",
+    "password": "password123"
+}
+```
+Response:
+```json
+{
+    "success": true,
+    "data": {
+        "user": {
+            "id": "user_id",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john@example.com",
+            "role": "student"
+        },
+        "token": "JWT_TOKEN"
+    }
+}
+```
+
+#### Forgot Password
+```
+POST /api/v1/auth/forgot-password
+```
+Request Body:
+```json
+{
+    "email": "john@example.com"
+}
+```
+Response:
+```json
+{
+    "success": true,
+    "message": "Password reset email sent"
+}
+```
+
+#### Reset Password
+```
+POST /api/v1/auth/reset-password/:token
+```
+Request Body:
+```json
+{
+    "password": "newpassword123"
+}
+```
+Response:
+```json
+{
+    "success": true,
+    "message": "Password reset successful"
+}
+```
+
+### Protected User Endpoints
+All these endpoints require authentication token in header:
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+#### Get Own Profile
+```
+GET /api/v1/users/me
+```
+Response:
+```json
+{
+    "success": true,
+    "data": {
+        "user": {
+            "id": "user_id",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john@example.com",
+            "role": "student"
+        }
+    }
+}
+```
+
+#### Update Own Profile
+```
+PUT /api/v1/users/me
+```
+Request Body:
+```json
+{
+    "firstName": "John",
+    "lastName": "Smith",
+    "email": "john.smith@example.com"
+}
+```
+Response:
+```json
+{
+    "success": true,
+    "data": {
+        "user": {
+            "id": "user_id",
+            "firstName": "John",
+            "lastName": "Smith",
+            "email": "john.smith@example.com"
+        }
+    }
+}
+```
+
+### Admin Endpoints
+Requires admin role and authentication token.
+
+#### Get All Users
+```
+GET /api/v1/users?page=1&limit=10
+```
+Response:
+```json
+{
+    "success": true,
+    "count": 10,
+    "pagination": {
+        "page": 1,
+        "limit": 10,
+        "total": 100,
+        "pages": 10
+    },
+    "data": [
+        {
+            "id": "user_id",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john@example.com",
+            "role": "student"
+        }
+        // ... more users
+    ]
+}
+```
+
+#### Get User by ID
+```
+GET /api/v1/users/:id
+```
+Response:
+```json
+{
+    "success": true,
+    "data": {
+        "user": {
+            "id": "user_id",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john@example.com",
+            "role": "student"
+        }
+    }
+}
+```
+
+#### Update User Role
+```
+PUT /api/v1/users/:id/role
+```
+Request Body:
+```json
+{
+    "role": "instructor"
+}
+```
+Response:
+```json
+{
+    "success": true,
+    "data": {
+        "user": {
+            "id": "user_id",
+            "role": "instructor"
+        }
+    }
+}
+```
+
+#### Delete User
+```
+DELETE /api/v1/users/:id
+```
+Response:
+```json
+{
+    "success": true,
+    "message": "User deleted successfully"
+}
+```
+
+## Error Responses
+
+All endpoints return error responses in the following format:
+```json
+{
+    "success": false,
+    "message": "Error message",
+    "error": {
+        "statusCode": 400,
+        "details": "Additional error details"
+    }
+}
+```
+
+Common HTTP Status Codes:
+- 200: Success
+- 201: Created
+- 400: Bad Request
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not Found
+- 500: Internal Server Error
 
 ## Environment Variables
 
-- `PORT` - Server port (default: 3000)
-- `MONGODB_URI` - MongoDB connection string
-- `NODE_ENV` - Node environment (development/production)
-- Other environment variables as needed
-
-## Logging
-
-Logs are stored in the `logs` directory:
-- `error.log` - Error logs
-- `combined.log` - All logs
+```env
+PORT=3000
+MONGODB_URI=mongodb://mongodb:27017/learning-platform
+JWT_SECRET=your-jwt-secret
+NODE_ENV=development
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-email
+SMTP_PASSWORD=your-password
+EMAIL_FROM=noreply@example.com
+APP_URL=http://localhost:3000
+```
 
 ## Testing
 
@@ -146,34 +356,3 @@ Run tests with coverage:
 ```bash
 npm run test:coverage
 ```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Error Handling
-
-The service includes centralized error handling with:
-- Custom error classes
-- Error logging
-- Standardized error responses
-
-## Security
-
-- CORS enabled
-- Helmet security headers
-- Rate limiting
-- Input validation
-- Password hashing
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For support, please email [support@example.com](mailto:support@example.com)
