@@ -10,7 +10,23 @@ const authController = {
     // Register new user
     register: async (req, res, next) => {
         try {
-            const { username } = req.body;
+            const { username, password } = req.body;
+
+            // Validate input
+            if (!username || !password) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Please provide username and password'
+                });
+            }
+
+            // Validate password strength
+            if (password.length < 8) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Password must be at least 8 characters long'
+                });
+            }
 
             // Check if user exists
             const existingUser = await User.findOne({ username });
@@ -75,6 +91,13 @@ const authController = {
                 process.env.JWT_SECRET,
                 { expiresIn: '1d' }
             );
+
+            // Set security headers
+            res.set({
+                'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+                'X-Frame-Options': 'DENY',
+                'X-Content-Type-Options': 'nosniff'
+            });
 
             res.status(200).json({
                 success: true,
