@@ -2,41 +2,45 @@
 version: '3.8'
 
 services:
+  # Node.js application service
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: user-service
     ports:
-      - "3000:3000"
+      - "3000:3000" # Map container port to host port
     environment:
       - MONGODB_URI=mongodb://mongodb:27017/learning-platform
       - NODE_ENV=development
       - PORT=3000
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
+      - .:/usr/src/app # Mount source code for development
+      - /usr/src/app/node_modules # Preserve node_modules
     depends_on:
-      - mongodb
+      - mongodb # Ensure MongoDB starts first
     networks:
       - app-network
-    restart: unless-stopped
+    restart: unless-stopped # Automatically restart on failure
 
+  # MongoDB service
   mongodb:
     image: mongo:latest
     container_name: mongodb
     ports:
-      - "27017:27017"
+      - "27017:27017" # Map container port to host port
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_data:/data/db # Persist database data
     networks:
       - app-network
     restart: unless-stopped
 
+# Network configuration
 networks:
   app-network:
     driver: bridge
 
+# Volume configuration
 volumes:
   mongodb_data:
     driver: local

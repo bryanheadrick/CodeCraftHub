@@ -1,17 +1,34 @@
 # Dockerfile
-FROM node:18-alpine
+# Multi-stage build for optimized production image
 
-# Create app directory
+# Build Stage
+FROM node:18-alpine AS builder
+
+# Set working directory
 WORKDIR /usr/src/app
 
-# Install app dependencies
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Bundle app source
+# Copy source code
 COPY . .
 
-# Expose port
+# Production Stage
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /usr/src/app
+
+# Copy built assets from builder
+COPY --from=builder /usr/src/app .
+
+# Set NODE_ENV
+ENV NODE_ENV=production
+
+# Expose application port
 EXPOSE 3000
 
 # Start command
