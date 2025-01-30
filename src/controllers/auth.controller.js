@@ -1,13 +1,31 @@
 /**
  * Authentication Controller
- * Handles user registration and login
+ * Handles user registration and login functionality
+ * @module controllers/auth
  */
 
 const User = require('../models/user.model');
 const jwt = require('jsonwebtoken');
 
+/**
+ * @typedef {Object} AuthController
+ * @property {Function} register - Register a new user
+ * @property {Function} login - Authenticate existing user
+ */
+
 const authController = {
-    // Register new user
+    /**
+     * Register a new user
+     * @async
+     * @param {Object} req - Express request object
+     * @param {Object} req.body - Request body
+     * @param {string} req.body.username - User's username
+     * @param {string} req.body.password - User's password
+     * @param {Object} res - Express response object
+     * @param {Function} next - Express next middleware function
+     * @returns {Promise<void>}
+     * @throws {Error} When registration fails
+     */
     register: async (req, res, next) => {
         try {
             const { username, password } = req.body;
@@ -62,7 +80,18 @@ const authController = {
         }
     },
 
-    // Login user
+    /**
+     * Login existing user
+     * @async
+     * @param {Object} req - Express request object
+     * @param {Object} req.body - Request body
+     * @param {string} req.body.username - User's username
+     * @param {string} req.body.password - User's password
+     * @param {Object} res - Express response object
+     * @param {Function} next - Express next middleware function
+     * @returns {Promise<void>}
+     * @throws {Error} When authentication fails
+     */
     login: async (req, res, next) => {
         try {
             const { username, password } = req.body;
@@ -115,4 +144,7 @@ const authController = {
     }
 };
 
+/**
+ * @type {AuthController}
+ */
 module.exports = authController;
