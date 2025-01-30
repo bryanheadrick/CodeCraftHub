@@ -15,7 +15,6 @@ const bcrypt = require('bcryptjs');
  * @property {boolean} isActive - Whether the user account is active
  * @property {Date} lastLogin - Last login timestamp
  * @property {Date} createdAt - Creation timestamp
- * @property {Date} updatedAt - Last update timestamp
  */
 
 const userSchema = new mongoose.Schema({
