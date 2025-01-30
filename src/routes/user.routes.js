@@ -1,33 +1,24 @@
 /**
  * User Routes
- * Protected routes for user management
- * All routes require authentication
- * Admin routes require additional role authorization
- * 
- * @module routes/user
+ * Only handles getting user profile
  */
 
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
 const auth = require('../middlewares/auth');
+
+// Get own profile (protected route)
+router.get('/me', auth.protect, userController.getProfile);
+const authController = require('../controllers/auth.controller');
 const validate = require('../middlewares/validate');
 
-// Protect all routes under this router
-router.use(auth.protect);
+// Register user
+router.post('/register', validate.registration, authController.register);
 
-// User routes (any authenticated user)
-router.get('/me', userController.getProfile);
-router.put('/me', validate.updateProfile, userController.updateProfile);
-router.put('/me/password', validate.changePassword, userController.changePassword);
+// Login user
+router.post('/login', validate.login, authController.login);
 
-// Admin only routes
-router.get('/', auth.authorize('admin'), userController.getAllUsers);
-router.get('/:id', auth.authorize('admin'), userController.getUserById);
-router.post('/', [auth.authorize('admin'), validate.createUser], userController.createUser);
-router.put('/:id', [auth.authorize('admin'), validate.updateUser], userController.updateUser);
-router.delete('/:id', auth.authorize('admin'), userController.deleteUser);
-router.put('/:id/role', [auth.authorize('admin'), validate.updateRole], userController.updateUserRole);
-router.put('/:id/status', auth.authorize('admin'), userController.toggleUserStatus);
+module.exports = router;
 
 module.exports = router;

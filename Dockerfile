@@ -1,11 +1,11 @@
-# Dockerfile
-# Multi-stage build for optimized production image
-
-# Build Stage
-FROM node:18-alpine AS builder
+# Development Dockerfile
+FROM node:18-alpine
 
 # Set working directory
 WORKDIR /usr/src/app
+
+# Install nodemon globally
+RUN npm install -g nodemon
 
 # Copy package files
 COPY package*.json ./
@@ -16,20 +16,8 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Production Stage
-FROM node:18-alpine
-
-# Set working directory
-WORKDIR /usr/src/app
-
-# Copy built assets from builder
-COPY --from=builder /usr/src/app .
-
-# Set NODE_ENV
-ENV NODE_ENV=production
-
-# Expose application port
+# Expose port
 EXPOSE 3000
 
-# Start command
-CMD ["npm", "start"]
+# Start command using nodemon
+CMD ["nodemon", "src/app.js"]
