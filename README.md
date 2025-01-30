@@ -1,44 +1,31 @@
-# User Service API
+# User Service
 
-A microservice for user management and authentication in a learning platform.
-
-## Table of Contents
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [API Documentation](#api-documentation)
-- [Docker Setup](#docker-setup)
+A simple user authentication service with Node.js, Express, and MongoDB.
 
 ## Features
 
-- User Authentication (Register, Login)
-- Email Verification
-- Password Reset
-- Role-based Access Control
-- User Profile Management
-- Admin User Management
-- Protected Routes
-- Docker Support
+- User registration and login
+- JWT Authentication
+- Protected user profile route
+- Docker development environment with hot reloading
 
 ## Tech Stack
 
 - Node.js
 - Express.js
 - MongoDB
-- Docker
-- JWT Authentication
-- Bcrypt for Password Hashing
-- Nodemailer for Email Services
+- Docker & Docker Compose
+- JWT for authentication
+- Bcrypt for password hashing
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
-- MongoDB
-- Docker and Docker Compose (optional)
+- Docker
+- Docker Compose
 
-### Local Setup
+### Installation & Setup
 
 1. Clone the repository:
 ```bash
@@ -46,264 +33,107 @@ git clone <repository-url>
 cd user-service
 ```
 
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-4. Start the server:
-```bash
-npm run dev
-```
-
-### Docker Setup
-
-1. Build and run with Docker Compose:
+2. Start the services:
 ```bash
 docker-compose up --build
 ```
 
-## API Documentation
+The application will be available at `http://localhost:3000`
 
-### Authentication Endpoints
+### Development
+
+The application uses nodemon for hot reloading. Any changes to the source files will automatically restart the server.
+
+### Database Management
+
+To reset the database:
+```bash
+# Remove MongoDB volume and containers
+docker-compose down -v
+
+# Or, to just drop the database:
+docker exec -it mongodb mongosh learning-platform --eval "db.dropDatabase()"
+```
+
+## API Endpoints
+
+### Public Routes
 
 #### Register User
 ```
-POST /api/v1/auth/register
-```
-Request Body:
-```json
-{
-    "firstName": "John",
-    "lastName": "Doe",
-    "email": "john@example.com",
-    "password": "password123",
-    "role": "student"
-}
-```
-Response:
-```json
-{
-    "success": true,
-    "data": {
-        "user": {
-            "id": "user_id",
-            "firstName": "John",
-            "lastName": "Doe",
-            "email": "john@example.com",
-            "role": "student"
-        },
-        "token": "JWT_TOKEN"
-    }
-}
-```
+POST /auth/register
 
-#### Login
-```
-POST /api/v1/auth/login
-```
-Request Body:
-```json
+Request:
 {
-    "email": "john@example.com",
+    "username": "john",
     "password": "password123"
 }
-```
+
 Response:
-```json
 {
     "success": true,
     "data": {
         "user": {
             "id": "user_id",
-            "firstName": "John",
-            "lastName": "Doe",
-            "email": "john@example.com",
-            "role": "student"
+            "username": "john"
         },
         "token": "JWT_TOKEN"
     }
 }
 ```
 
-#### Forgot Password
+#### Login User
 ```
-POST /api/v1/auth/forgot-password
-```
-Request Body:
-```json
-{
-    "email": "john@example.com"
-}
-```
-Response:
-```json
-{
-    "success": true,
-    "message": "Password reset email sent"
-}
-```
+POST /auth/login
 
-#### Reset Password
-```
-POST /api/v1/auth/reset-password/:token
-```
-Request Body:
-```json
+Request:
 {
-    "password": "newpassword123"
+    "username": "john",
+    "password": "password123"
 }
-```
-Response:
-```json
-{
-    "success": true,
-    "message": "Password reset successful"
-}
-```
 
-### Protected User Endpoints
-All these endpoints require authentication token in header:
-```
-Authorization: Bearer <JWT_TOKEN>
-```
-
-#### Get Own Profile
-```
-GET /api/v1/users/me
-```
 Response:
-```json
 {
     "success": true,
     "data": {
         "user": {
             "id": "user_id",
-            "firstName": "John",
-            "lastName": "Doe",
-            "email": "john@example.com",
-            "role": "student"
-        }
+            "username": "john"
+        },
+        "token": "JWT_TOKEN"
     }
 }
 ```
 
-#### Update Own Profile
+### Protected Routes
+
+#### Get User Profile
 ```
-PUT /api/v1/users/me
-```
-Request Body:
-```json
-{
-    "firstName": "John",
-    "lastName": "Smith",
-    "email": "john.smith@example.com"
-}
-```
+GET /users/me
+Headers:
+Authorization: Bearer JWT_TOKEN
+
 Response:
-```json
 {
     "success": true,
     "data": {
         "user": {
             "id": "user_id",
-            "firstName": "John",
-            "lastName": "Smith",
-            "email": "john.smith@example.com"
+            "username": "john"
         }
     }
 }
 ```
 
-### Admin Endpoints
-Requires admin role and authentication token.
+### Health Check
+```
+GET /health
 
-#### Get All Users
-```
-GET /api/v1/users?page=1&limit=10
-```
 Response:
-```json
 {
-    "success": true,
-    "count": 10,
-    "pagination": {
-        "page": 1,
-        "limit": 10,
-        "total": 100,
-        "pages": 10
-    },
-    "data": [
-        {
-            "id": "user_id",
-            "firstName": "John",
-            "lastName": "Doe",
-            "email": "john@example.com",
-            "role": "student"
-        }
-        // ... more users
-    ]
-}
-```
-
-#### Get User by ID
-```
-GET /api/v1/users/:id
-```
-Response:
-```json
-{
-    "success": true,
-    "data": {
-        "user": {
-            "id": "user_id",
-            "firstName": "John",
-            "lastName": "Doe",
-            "email": "john@example.com",
-            "role": "student"
-        }
-    }
-}
-```
-
-#### Update User Role
-```
-PUT /api/v1/users/:id/role
-```
-Request Body:
-```json
-{
-    "role": "instructor"
-}
-```
-Response:
-```json
-{
-    "success": true,
-    "data": {
-        "user": {
-            "id": "user_id",
-            "role": "instructor"
-        }
-    }
-}
-```
-
-#### Delete User
-```
-DELETE /api/v1/users/:id
-```
-Response:
-```json
-{
-    "success": true,
-    "message": "User deleted successfully"
+    "status": "success",
+    "message": "User Service API",
+    "timestamp": "2025-01-30T..."
 }
 ```
 
@@ -314,10 +144,7 @@ All endpoints return error responses in the following format:
 {
     "success": false,
     "message": "Error message",
-    "error": {
-        "statusCode": 400,
-        "details": "Additional error details"
-    }
+    "errors": ["Detailed error message"]
 }
 ```
 
@@ -326,7 +153,6 @@ Common HTTP Status Codes:
 - 201: Created
 - 400: Bad Request
 - 401: Unauthorized
-- 403: Forbidden
 - 404: Not Found
 - 500: Internal Server Error
 
@@ -335,24 +161,49 @@ Common HTTP Status Codes:
 ```env
 PORT=3000
 MONGODB_URI=mongodb://mongodb:27017/learning-platform
-JWT_SECRET=your-jwt-secret
+JWT_SECRET=your-super-secret-key
 NODE_ENV=development
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=your-email
-SMTP_PASSWORD=your-password
-EMAIL_FROM=noreply@example.com
-APP_URL=http://localhost:3000
 ```
 
-## Testing
+## Docker Commands
 
-Run tests:
+Start services:
 ```bash
-npm test
+docker-compose up
 ```
 
-Run tests with coverage:
+Rebuild and start services:
 ```bash
-npm run test:coverage
+docker-compose up --build
+```
+
+Stop services:
+```bash
+docker-compose down
+```
+
+View logs:
+```bash
+docker-compose logs -f app
+```
+
+## Project Structure
+```
+src/
+├── config/
+│   └── database.js
+├── controllers/
+│   ├── auth.controller.js
+│   └── user.controller.js
+├── middlewares/
+│   ├── auth.js
+│   ├── error-handler.js
+│   └── validate.js
+├── models/
+│   └── user.model.js
+├── routes/
+│   ├── auth.routes.js
+│   ├── user.routes.js
+│   └── index.js
+└── app.js
 ```
