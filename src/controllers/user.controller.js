@@ -1,6 +1,7 @@
 /**
  * User Controller
- * Handles all user-related business logic and request/response processing
+ * Handles user management operations
+ * Includes both user and admin level operations
  * 
  * @module controllers/user
  */
@@ -10,160 +11,265 @@ const logger = require('../config/logger');
 
 const userController = {
     /**
-     * Create a new user
+     * Get current user's profile
+     * @route GET /api/v1/users/me
+     * @access Private
+     */
+    getProfile: async (req, res, next) => {
+        try {
+            const user = await User.findById(req.user.id);
+            res.status(200).json({
+                success: true,
+                data: user
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Update current user's profile
+     * @route PUT /api/v1/users/me
+     * @access Private
+     */
+    updateProfile: async (req, res, next) => {
+        try {
+            // Fields that users can update
+            const allowedUpdates = {
+                firstName: req.body.firstName,
+                lastName: req.body.lastName,
+                email: req.body.email
+            };
+
+            const user = await User.findByIdAndUpdate(
+                req.user.id,
+                allowedUpdates,
+                { new: true, runValidators: true }
+            );
+
+            res.status(200).json({
+                success: true,
+                data: user
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Change current user's password
+     * @route PUT /api/v1/users/me/password
+     * @access Private
+     */
+    changePassword: async (req, res, next) => {
+        try {
+            const user = await User.findById(req.user.id).select('+password');
+            
+            // Check current password
+            const isMatch = await user.comparePassword(req.body.currentPassword);
+            if (!isMatch) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Current password is incorrect'
+                });
+            }
+
+            // Update password
+            user.password = req.body.newPassword;
+            await user.save();
+
+            res.status(200).json({
+                success: true,
+                message: 'Password updated successfully'
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Get all users (admin only)
+     * @route GET /api/v1/users
+     * @access Admin
+     */
+    getAllUsers: async (req, res, next) => {
+        try {
+            // Add pagination
+            const page = parseInt(req.query.page, 10) || 1;
+            const limit = parseInt(req.query.limit, 10) || 10;
+            const startIndex = (page - 1) * limit;
+
+            const users = await User.find()
+                .skip(startIndex)
+                .limit(limit)
+                .sort({ createdAt: -1 });
+
+            const total = await User.countDocuments();
+
+            res.status(200).json({
+                success: true,
+                count: users.length,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    pages: Math.ceil(total / limit)
+                },
+                data: users
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Get specific user (admin only)
+     * @route GET /api/v1/users/:id
+     * @access Admin
+     */
+    getUserById: async (req, res, next) => {
+        try {
+            const user = await User.findById(req.params.id);
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                data: user
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Create new user (admin only)
      * @route POST /api/v1/users
-     * @param {Object} req.body - User creation data
-     * @param {string} req.body.firstName - User's first name
-     * @param {string} req.body.lastName - User's last name
-     * @param {string} req.body.email - User's email
-     * @param {string} req.body.password - User's password
-     * @param {string} [req.body.role=student] - User's role
-     * @returns {Object} Created user object
-     * @throws {Error} If user creation fails
+     * @access Admin
      */
     createUser: async (req, res, next) => {
         try {
-            logger.info('Creating new user', { email: req.body.email });
             const user = await User.create(req.body);
-            
-            logger.info('User created successfully', { userId: user._id });
             res.status(201).json({
                 success: true,
                 data: user
             });
         } catch (error) {
-            logger.error('User creation failed', { error: error.message });
             next(error);
         }
     },
 
     /**
-     * Get all users
-     * @route GET /api/v1/users
-     * @returns {Array} Array of user objects
-     * @throws {Error} If users fetch fails
-     */
-    getAllUsers: async (req, res, next) => {
-        try {
-            logger.info('Fetching all users');
-            const users = await User.find({});
-            
-            res.status(200).json({
-                success: true,
-                count: users.length,
-                data: users
-            });
-        } catch (error) {
-            logger.error('Fetching users failed', { error: error.message });
-            next(error);
-        }
-    },
-
-    /**
-     * Get a single user by ID
-     * @route GET /api/v1/users/:id
-     * @param {string} req.params.id - User ID
-     * @returns {Object} User object
-     * @throws {Error} If user not found or fetch fails
-     */
-    getUserById: async (req, res, next) => {
-        try {
-            logger.info('Fetching user by ID', { userId: req.params.id });
-            const user = await User.findById(req.params.id);
-            
-            if (!user) {
-                logger.warn('User not found', { userId: req.params.id });
-                return res.status(404).json({
-                    success: false,
-                    message: 'User not found'
-                });
-            }
-
-            res.status(200).json({
-                success: true,
-                data: user
-            });
-        } catch (error) {
-            logger.error('Fetching user failed', { 
-                userId: req.params.id, 
-                error: error.message 
-            });
-            next(error);
-        }
-    },
-
-    /**
-     * Update a user
+     * Update user (admin only)
      * @route PUT /api/v1/users/:id
-     * @param {string} req.params.id - User ID
-     * @param {Object} req.body - Update data
-     * @returns {Object} Updated user object
-     * @throws {Error} If user not found or update fails
+     * @access Admin
      */
     updateUser: async (req, res, next) => {
         try {
-            logger.info('Updating user', { userId: req.params.id });
             const user = await User.findByIdAndUpdate(
                 req.params.id,
                 req.body,
-                { 
-                    new: true,
-                    runValidators: true
-                }
+                { new: true, runValidators: true }
             );
 
             if (!user) {
-                logger.warn('User not found for update', { userId: req.params.id });
                 return res.status(404).json({
                     success: false,
                     message: 'User not found'
                 });
             }
 
-            logger.info('User updated successfully', { userId: user._id });
             res.status(200).json({
                 success: true,
                 data: user
             });
         } catch (error) {
-            logger.error('User update failed', { 
-                userId: req.params.id, 
-                error: error.message 
-            });
             next(error);
         }
     },
 
     /**
-     * Delete a user
-     * @route DELETE /api/v1/users/:id
-     * @param {string} req.params.id - User ID
-     * @returns {null} No content
-     * @throws {Error} If user not found or deletion fails
+     * Update user role (admin only)
+     * @route PUT /api/v1/users/:id/role
+     * @access Admin
      */
-    deleteUser: async (req, res, next) => {
+    updateUserRole: async (req, res, next) => {
         try {
-            logger.info('Deleting user', { userId: req.params.id });
-            const user = await User.findByIdAndDelete(req.params.id);
+            const user = await User.findByIdAndUpdate(
+                req.params.id,
+                { role: req.body.role },
+                { new: true, runValidators: true }
+            );
 
             if (!user) {
-                logger.warn('User not found for deletion', { userId: req.params.id });
                 return res.status(404).json({
                     success: false,
                     message: 'User not found'
                 });
             }
 
-            logger.info('User deleted successfully', { userId: req.params.id });
+            res.status(200).json({
+                success: true,
+                data: user
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Toggle user active status (admin only)
+     * @route PUT /api/v1/users/:id/status
+     * @access Admin
+     */
+    toggleUserStatus: async (req, res, next) => {
+        try {
+            const user = await User.findById(req.params.id);
+            
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+
+            user.isActive = !user.isActive;
+            await user.save();
+
+            res.status(200).json({
+                success: true,
+                data: user
+            });
+        } catch (error) {
+            next(error);
+        }
+    },
+
+    /**
+     * Delete user (admin only)
+     * @route DELETE /api/v1/users/:id
+     * @access Admin
+     */
+    deleteUser: async (req, res, next) => {
+        try {
+            const user = await User.findByIdAndDelete(req.params.id);
+
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+
             res.status(200).json({
                 success: true,
                 message: 'User deleted successfully'
             });
         } catch (error) {
-            logger.error('User deletion failed', { 
-                userId: req.params.id, 
-                error: error.message 
-            });
             next(error);
         }
     }
