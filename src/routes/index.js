@@ -1,24 +1,30 @@
-// src/routes/index.js
-const express = require('express');
-const userRoutes = require('./user.routes');
+/**
+ * API Routes Index
+ * Central route configuration for the application
+ * 
+ * @module routes/index
+ */
 
+const express = require('express');
 const router = express.Router();
+const userRoutes = require('./user.routes');
+const authRoutes = require('./auth.routes');
 
 // API information route
 router.get('/', (req, res) => {
     res.json({
         status: 'success',
-        message: 'Welcome to User Service API',
+        message: 'User Service API',
         version: '1.0.0',
         endpoints: {
-            users: '/api/v1/users',
-            health: '/health'
+            auth: '/api/v1/auth',
+            users: '/api/v1/users'
         }
     });
 });
 
-// Mount user routes
+// Mount routes
+router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 
-// Export router
 module.exports = router;
