@@ -7,11 +7,22 @@ const connectDB = async () => {
         const conn = await mongoose.connect(process.env.MONGODB_URI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
+            connectTimeoutMS: 10000, // 10 seconds timeout
+            socketTimeoutMS: 45000,  // 45 seconds timeout
+        });
+
+        // Add disconnect handler
+        mongoose.connection.on('disconnected', () => {
+            logger.warn('MongoDB disconnected. Attempting to reconnect...');
         });
 
         logger.info(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
-        logger.error('MongoDB connection error:', error);
+        if (error.name === 'MongooseServerSelectionError') {
+            logger.error('Unable to connect to MongoDB server. Please check if MongoDB is running:', error);
+        } else {
+            logger.error('MongoDB connection error:', error);
+        }
         process.exit(1);
     }
 };
