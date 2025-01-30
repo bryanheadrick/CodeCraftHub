@@ -1,24 +1,35 @@
 /**
  * User Routes
- * Only handles getting user profile
+ * Handles all user-related routes including authentication
+ * @module routes/user
  */
 
 const express = require('express');
 const router = express.Router();
-const userController = require('../controllers/user.controller');
-const auth = require('../middlewares/auth');
 
-// Get own profile (protected route)
-router.get('/me', auth.protect, userController.getProfile);
+// Controllers
+const userController = require('../controllers/user.controller');
 const authController = require('../controllers/auth.controller');
+
+// Middlewares
+const auth = require('../middlewares/auth');
 const validate = require('../middlewares/validate');
 
-// Register user
+/**
+ * Authentication Routes
+ * @route POST /users/register
+ * @route POST /users/login
+ */
 router.post('/register', validate.registration, authController.register);
 
 // Login user
 router.post('/login', validate.login, authController.login);
 
-module.exports = router;
+/**
+ * Protected User Routes
+ * Requires authentication
+ * @route GET /users/me
+ */
+router.get('/me', auth.protect, userController.getProfile);
 
 module.exports = router;
